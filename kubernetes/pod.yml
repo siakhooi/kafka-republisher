@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-republisher
+spec:
+  restartPolicy: OnFailure
+  automountServiceAccountToken: false
+  containers:
+    - image: kafka-republisher:latest
+      imagePullPolicy: IfNotPresent
+      name: kafka-republisher
+      env:
+        - name: BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: FROM_TOPIC
+          value: topicA
+        - name: TO_TOPIC
+          value: topicB
+        - name: SLEEP_TIME
+          value: "30"
+        - name: GROUP_ID
+          value: delayer
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+          ephemeral-storage: 1Gi

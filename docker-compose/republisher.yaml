@@ -1,0 +1,15 @@
+services:
+  kafka-republisher:
+    image: kafka-republisher:latest
+    container_name: kafka-republisher
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      FROM_TOPIC: topicA
+      TO_TOPIC: topicB
+      SLEEP_TIME: 30
+      GROUP_ID: delayer
+    deploy:
+        resources:
+            limits:
+              cpus: "1"
+              memory: 256M
