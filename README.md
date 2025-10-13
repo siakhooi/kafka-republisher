@@ -12,7 +12,7 @@ Example environments:
       GROUP_ID: delayer
 ```
 
-# docker build
+## docker build
 
 ```
 cd docker
@@ -21,3 +21,7 @@ docker build -t siakhooi/kafka-republisher:latest .
 docker login -p xxxtoken
 docker push siakhooi/kafka-republisher:latest
 ```
+
+## Deliverables
+
+- https://hub.docker.com/r/siakhooi/kafka-republisher
