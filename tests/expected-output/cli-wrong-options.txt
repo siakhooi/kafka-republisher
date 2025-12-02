@@ -1,0 +1,2 @@
+usage: kafka-republisher [-h] [-v]
+kafka-republisher: error: unrecognized arguments: -p
