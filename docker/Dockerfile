@@ -1,9 +1,9 @@
 FROM python:3.14-slim
 
-WORKDIR /app
-COPY republisher.py /app/
+RUN useradd -m  appuser
 
-RUN pip install confluent-kafka
+COPY dist/*.whl /tmp/
+RUN pip install --no-cache-dir /tmp/kafka_republisher-*-py3-none-any.whl && rm /tmp/*.whl
 
 ENV BOOTSTRAP_SERVERS=localhost:9092 \
     FROM_TOPIC=topicA \
@@ -11,4 +11,5 @@ ENV BOOTSTRAP_SERVERS=localhost:9092 \
     SLEEP_TIME=30 \
     GROUP_ID=delayer
 
-ENTRYPOINT ["python", "republisher.py"]
+USER appuser
+CMD ["kafka-republisher"]

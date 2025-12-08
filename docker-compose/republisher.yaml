@@ -1,6 +1,6 @@
 services:
   kafka-republisher:
-    image: kafka-republisher:latest
+    image: siakhooi/kafka-republisher:latest
     container_name: kafka-republisher
     environment:
       BOOTSTRAP_SERVERS: kafka:9092

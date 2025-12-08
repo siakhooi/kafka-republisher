@@ -34,3 +34,6 @@ release:
 commit:
 	scripts/git-commit.sh
 	git push
+
+docker-build:
+	docker build -t siakhooi/kafka-republisher:latest -f docker/Dockerfile .

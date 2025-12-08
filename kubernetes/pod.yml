@@ -6,7 +6,7 @@ spec:
   restartPolicy: OnFailure
   automountServiceAccountToken: false
   containers:
-    - image: kafka-republisher:latest
+    - image: siakhooi/kafka-republisher:latest
       imagePullPolicy: IfNotPresent
       name: kafka-republisher
       env:

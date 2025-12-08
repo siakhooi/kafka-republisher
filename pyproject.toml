@@ -17,6 +17,7 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "confluent-kafka (>=2.12.2,<3.0.0)"
 ]
 
 [project.urls]

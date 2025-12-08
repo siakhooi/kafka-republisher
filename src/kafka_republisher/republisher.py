@@ -4,7 +4,7 @@ import threading
 from confluent_kafka import Consumer, Producer
 
 
-def main():
+def run():
     bootstrap = os.getenv("BOOTSTRAP_SERVERS", "localhost:9092")
     from_topic = os.getenv("FROM_TOPIC", "topicA")
     to_topic = os.getenv("TO_TOPIC", "topicB")
@@ -55,7 +55,3 @@ def main():
         print("Stopping...")
     finally:
         consumer.close()
-
-
-if __name__ == "__main__":
-    main()
