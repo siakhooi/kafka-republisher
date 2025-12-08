@@ -1,7 +1,7 @@
 import os
 import time
 import threading
-from confluent_kafka import Consumer, Producer
+from kafka_republisher.kafka_client import get_consumer, get_producer
 
 
 def run():
@@ -17,12 +17,8 @@ def run():
     print(f"  To: {to_topic}")
     print(f"  Delay: {sleep_time}s")
 
-    consumer = Consumer({
-        'bootstrap.servers': bootstrap,
-        'group.id': group_id,
-        'auto.offset.reset': 'earliest'
-    })
-    producer = Producer({'bootstrap.servers': bootstrap})
+    consumer = get_consumer(bootstrap, group_id)
+    producer = get_producer(bootstrap)
 
     consumer.subscribe([from_topic])
 
