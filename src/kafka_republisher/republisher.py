@@ -1,6 +1,24 @@
-from kafka_republisher.config import get_config_from_env
+from kafka_republisher.config import get_config_from_env, RepublisherConfig
 from kafka_republisher.kafka_client import get_consumer, get_producer
 from kafka_republisher.processor import process_message
+
+
+def consume_and_process_loop(consumer, producer, config: RepublisherConfig):
+    """Main consumption loop that polls and processes messages.
+
+    Args:
+        consumer: Kafka consumer instance
+        producer: Kafka producer instance
+        config: RepublisherConfig with configuration settings
+
+    This function runs indefinitely until KeyboardInterrupt.
+    """
+    try:
+        while True:
+            msg = consumer.poll(1.0)
+            process_message(msg, producer, config)
+    except KeyboardInterrupt:
+        print("Stopping...")
 
 
 def run():
@@ -18,11 +36,6 @@ def run():
     consumer.subscribe([config.from_topic])
 
     try:
-        while True:
-            msg = consumer.poll(1.0)
-            process_message(msg, producer, config)
-
-    except KeyboardInterrupt:
-        print("Stopping...")
+        consume_and_process_loop(consumer, producer, config)
     finally:
         consumer.close()
