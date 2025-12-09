@@ -1,7 +1,7 @@
-import time
 import threading
 from kafka_republisher.config import get_config_from_env
 from kafka_republisher.kafka_client import get_consumer, get_producer
+from kafka_republisher.publisher import delayed_publish
 
 
 def run():
@@ -17,12 +17,6 @@ def run():
     producer = get_producer(config.bootstrap_servers)
 
     consumer.subscribe([config.from_topic])
-
-    def delayed_publish(key, value):
-        time.sleep(config.sleep_time)
-        producer.produce(config.to_topic, key=key, value=value)
-        producer.flush()
-        print(f"Republished to {config.to_topic}: {value}")
 
     try:
         while True:
@@ -42,7 +36,7 @@ def run():
 
             threading.Thread(
                 target=delayed_publish,
-                args=(key, value),
+                args=(producer, config, key, value),
                 daemon=True
             ).start()
 
