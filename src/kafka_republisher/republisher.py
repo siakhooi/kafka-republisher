@@ -1,32 +1,28 @@
-import os
 import time
 import threading
+from kafka_republisher.config import get_config_from_env
 from kafka_republisher.kafka_client import get_consumer, get_producer
 
 
 def run():
-    bootstrap = os.getenv("BOOTSTRAP_SERVERS", "localhost:9092")
-    from_topic = os.getenv("FROM_TOPIC", "topicA")
-    to_topic = os.getenv("TO_TOPIC", "topicB")
-    sleep_time = int(os.getenv("SLEEP_TIME", "30"))
-    group_id = os.getenv("GROUP_ID", "delayer")
+    config = get_config_from_env()
 
     print("Starting Kafka Delayer (parallel mode)")
-    print(f"  Bootstrap: {bootstrap}")
-    print(f"  From: {from_topic}")
-    print(f"  To: {to_topic}")
-    print(f"  Delay: {sleep_time}s")
+    print(f"  Bootstrap: {config.bootstrap_servers}")
+    print(f"  From: {config.from_topic}")
+    print(f"  To: {config.to_topic}")
+    print(f"  Delay: {config.sleep_time}s")
 
-    consumer = get_consumer(bootstrap, group_id)
-    producer = get_producer(bootstrap)
+    consumer = get_consumer(config.bootstrap_servers, config.group_id)
+    producer = get_producer(config.bootstrap_servers)
 
-    consumer.subscribe([from_topic])
+    consumer.subscribe([config.from_topic])
 
     def delayed_publish(key, value):
-        time.sleep(sleep_time)
-        producer.produce(to_topic, key=key, value=value)
+        time.sleep(config.sleep_time)
+        producer.produce(config.to_topic, key=key, value=value)
         producer.flush()
-        print(f"Republished to {to_topic}: {value}")
+        print(f"Republished to {config.to_topic}: {value}")
 
     try:
         while True:
@@ -39,7 +35,10 @@ def run():
 
             value = msg.value().decode('utf-8')
             key = msg.key().decode('utf-8') if msg.key() else None
-            print(f"Received: {value}, scheduling publish in {sleep_time}s")
+            print(
+                f"Received: {value}, scheduling publish in "
+                f"{config.sleep_time}s"
+            )
 
             threading.Thread(
                 target=delayed_publish,
