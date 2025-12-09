@@ -1,7 +1,6 @@
-import threading
 from kafka_republisher.config import get_config_from_env
 from kafka_republisher.kafka_client import get_consumer, get_producer
-from kafka_republisher.publisher import delayed_publish
+from kafka_republisher.processor import process_message
 
 
 def run():
@@ -21,24 +20,7 @@ def run():
     try:
         while True:
             msg = consumer.poll(1.0)
-            if msg is None:
-                continue
-            if msg.error():
-                print("Consumer error:", msg.error())
-                continue
-
-            value = msg.value().decode('utf-8')
-            key = msg.key().decode('utf-8') if msg.key() else None
-            print(
-                f"Received: {value}, scheduling publish in "
-                f"{config.sleep_time}s"
-            )
-
-            threading.Thread(
-                target=delayed_publish,
-                args=(producer, config, key, value),
-                daemon=True
-            ).start()
+            process_message(msg, producer, config)
 
     except KeyboardInterrupt:
         print("Stopping...")
