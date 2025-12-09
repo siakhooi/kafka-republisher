@@ -1,4 +1,4 @@
-from kafka_republisher.republisher import consume_and_process_loop
+from kafka_republisher.republisher import consume_and_process_loop, run
 from kafka_republisher.config import RepublisherConfig
 
 from unittest.mock import Mock, patch
@@ -237,3 +237,274 @@ class TestConsumeAndProcessLoop:
 
         # Verify poll happens before process
         assert call_order == ["poll", "process", "poll"]
+
+
+class TestRun:
+    """Tests for run function"""
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_loads_config(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() loads configuration from environment"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+
+        run()
+
+        mock_get_config.assert_called_once()
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_creates_consumer_and_producer(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() creates Kafka consumer and producer"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="broker:9092",
+            from_topic="events",
+            to_topic="events-delayed",
+            sleep_time=60,
+            group_id="consumer-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_producer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+        mock_get_producer.return_value = mock_producer
+
+        run()
+
+        mock_get_consumer.assert_called_once_with(
+            "broker:9092", "consumer-group"
+        )
+        mock_get_producer.assert_called_once_with("broker:9092")
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_subscribes_to_topic(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() subscribes consumer to from_topic"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="input-topic",
+            to_topic="output-topic",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+
+        run()
+
+        mock_consumer.subscribe.assert_called_once_with(["input-topic"])
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_calls_consume_loop(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() calls consume_and_process_loop with correct
+        arguments"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_producer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+        mock_get_producer.return_value = mock_producer
+
+        run()
+
+        mock_loop.assert_called_once_with(
+            mock_consumer, mock_producer, mock_config
+        )
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_closes_consumer_on_normal_completion(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() closes consumer after loop completes normally"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+
+        run()
+
+        mock_consumer.close.assert_called_once()
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_closes_consumer_on_exception(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() closes consumer even when exception occurs"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+        mock_loop.side_effect = Exception("Test exception")
+
+        try:
+            run()
+        except Exception:
+            pass
+
+        mock_consumer.close.assert_called_once()
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_prints_startup_info(
+        self, mock_get_config, mock_get_consumer, mock_get_producer,
+        mock_loop, capsys
+    ):
+        """Test that run() prints startup information"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="broker:9092",
+            from_topic="input",
+            to_topic="output",
+            sleep_time=45,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+
+        run()
+
+        captured = capsys.readouterr()
+        assert "Starting Kafka Delayer (parallel mode)" in captured.out
+        assert "Bootstrap: broker:9092" in captured.out
+        assert "From: input" in captured.out
+        assert "To: output" in captured.out
+        assert "Delay: 45s" in captured.out
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_correct_call_sequence(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() calls functions in correct order"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_producer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+        mock_get_producer.return_value = mock_producer
+
+        call_order = []
+
+        mock_get_config.side_effect = lambda: (
+            call_order.append("config"),
+            mock_config,
+        )[1]
+        mock_get_consumer.side_effect = lambda *args: (
+            call_order.append("consumer"),
+            mock_consumer,
+        )[1]
+        mock_get_producer.side_effect = lambda *args: (
+            call_order.append("producer"),
+            mock_producer,
+        )[1]
+        mock_consumer.subscribe.side_effect = lambda *args: call_order.append(
+            "subscribe"
+        )
+        mock_loop.side_effect = (
+            lambda *args, **kwargs: call_order.append("loop")
+        )
+        mock_consumer.close.side_effect = lambda: call_order.append("close")
+
+        run()
+
+        assert call_order == [
+            "config",
+            "consumer",
+            "producer",
+            "subscribe",
+            "loop",
+            "close",
+        ]
+
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_passes_correct_config_values(
+        self, mock_get_config, mock_get_consumer, mock_get_producer, mock_loop
+    ):
+        """Test that run() passes config with correct values to consume loop"""
+        mock_config = RepublisherConfig(
+            bootstrap_servers="test-broker:9092",
+            from_topic="test-input",
+            to_topic="test-output",
+            sleep_time=120,
+            group_id="test-consumer-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_producer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+        mock_get_producer.return_value = mock_producer
+
+        run()
+
+        # Verify the config object passed to loop
+        call_args = mock_loop.call_args
+        passed_config = call_args[0][2]
+        assert passed_config.bootstrap_servers == "test-broker:9092"
+        assert passed_config.from_topic == "test-input"
+        assert passed_config.to_topic == "test-output"
+        assert passed_config.sleep_time == 120
+        assert passed_config.group_id == "test-consumer-group"
