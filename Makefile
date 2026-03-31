@@ -1,10 +1,8 @@
 help:
 clean:
-	rm -rf dist target coverage \
-	.coverage \
+	rm -rf dist target coverage .coverage \
 	src/kafka_republisher/__pycache__ \
-	tests/__pycache__ \
-	.pytest_cache
+	tests/__pycache__ .pytest_cache .tox
 run:
 	poetry run kafka-republisher
 set-version:
@@ -38,9 +36,5 @@ commit:
 docker-build:
 	docker build -t siakhooi/kafka-republisher:latest -f docker/Dockerfile .
 
-fix-cert:
-	pip install pip-system-certs --trusted-host pypi.org --trusted-host files.pythonhosted.org
-fix-pyenv:
-	 pyenv versions --bare > .python-version
 tox-run:
 	tox run
