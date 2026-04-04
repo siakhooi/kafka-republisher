@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "kafka-republisher: scenario",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "kafka_republisher.cli",
+            "args": [
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
