@@ -23,7 +23,12 @@ class TestConsumeAndProcessLoop:
         # Make poll return None, then raise KeyboardInterrupt
         mock_consumer.poll.side_effect = [None, KeyboardInterrupt()]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         assert mock_consumer.poll.call_count == 2
         mock_consumer.poll.assert_called_with(1.0)
@@ -45,7 +50,12 @@ class TestConsumeAndProcessLoop:
         # Return a message then interrupt
         mock_consumer.poll.side_effect = [mock_msg, KeyboardInterrupt()]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         # Only 1 call (KeyboardInterrupt prevents 2nd process_message call)
         assert mock_process.call_count == 1
@@ -68,7 +78,12 @@ class TestConsumeAndProcessLoop:
 
         mock_consumer.poll.side_effect = KeyboardInterrupt()
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         captured = capsys.readouterr()
         assert "Stopping..." in captured.out
@@ -99,7 +114,12 @@ class TestConsumeAndProcessLoop:
             KeyboardInterrupt(),
         ]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         assert mock_consumer.poll.call_count == 6
         # 5 process_message calls (KeyboardInterrupt stops before 6th)
@@ -123,7 +143,12 @@ class TestConsumeAndProcessLoop:
 
         mock_consumer.poll.side_effect = [mock_msg, KeyboardInterrupt()]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         # Verify config was passed correctly
         calls = mock_process.call_args_list
@@ -154,7 +179,12 @@ class TestConsumeAndProcessLoop:
             KeyboardInterrupt(),
         ]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         assert mock_consumer.poll.call_count == 4
         # 3 process_message calls (KeyboardInterrupt stops before 4th)
@@ -175,7 +205,12 @@ class TestConsumeAndProcessLoop:
 
         mock_consumer.poll.side_effect = [None, KeyboardInterrupt()]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         # Verify poll was called with 1.0 second timeout
         for call_args in mock_consumer.poll.call_args_list:
@@ -197,16 +232,19 @@ class TestConsumeAndProcessLoop:
 
         mock_consumer.poll.side_effect = [mock_msg, KeyboardInterrupt()]
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         # Verify producer was passed
         calls = mock_process.call_args_list
         assert calls[0][0][1] == mock_producer
 
     @patch("kafka_republisher.republisher.process_message")
-    def test_consume_and_process_loop_order_of_operations(
-        self, mock_process
-    ):
+    def test_consume_and_process_loop_order_of_operations(self, mock_process):
         """Test that loop polls before processing"""
         mock_consumer = Mock()
         mock_producer = Mock()
@@ -233,7 +271,12 @@ class TestConsumeAndProcessLoop:
         mock_consumer.poll.side_effect = track_poll
         mock_process.side_effect = track_process
 
-        consume_and_process_loop(mock_consumer, mock_producer, config)
+        import threading
+
+        shutdown_event = threading.Event()
+        consume_and_process_loop(
+            mock_consumer, mock_producer, config, shutdown_event
+        )
 
         # Verify poll happens before process
         assert call_order == ["poll", "process", "poll"]
@@ -338,11 +381,16 @@ class TestRun:
         mock_get_consumer.return_value = mock_consumer
         mock_get_producer.return_value = mock_producer
 
+        import threading
+
         run()
 
-        mock_loop.assert_called_once_with(
-            mock_consumer, mock_producer, mock_config
-        )
+        # Accept any threading.Event for the fourth argument
+        args, kwargs = mock_loop.call_args
+        assert args[0] == mock_consumer
+        assert args[1] == mock_producer
+        assert args[2] == mock_config
+        assert isinstance(args[3], threading.Event)
 
     @patch("kafka_republisher.republisher.consume_and_process_loop")
     @patch("kafka_republisher.republisher.get_producer")
@@ -399,8 +447,12 @@ class TestRun:
     @patch("kafka_republisher.republisher.get_consumer")
     @patch("kafka_republisher.republisher.get_config_from_env")
     def test_run_prints_startup_info(
-        self, mock_get_config, mock_get_consumer, mock_get_producer,
-        mock_loop, capsys
+        self,
+        mock_get_config,
+        mock_get_consumer,
+        mock_get_producer,
+        mock_loop,
+        capsys,
     ):
         """Test that run() prints startup information"""
         mock_config = RepublisherConfig(
@@ -461,8 +513,8 @@ class TestRun:
         mock_consumer.subscribe.side_effect = lambda *args: call_order.append(
             "subscribe"
         )
-        mock_loop.side_effect = (
-            lambda *args, **kwargs: call_order.append("loop")
+        mock_loop.side_effect = lambda *args, **kwargs: call_order.append(
+            "loop"
         )
         mock_consumer.close.side_effect = lambda: call_order.append("close")
 
