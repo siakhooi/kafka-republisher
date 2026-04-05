@@ -31,10 +31,6 @@ one: clean set-version install flake8 build
 release:
 	scripts/release.sh
 
-commit:
-	scripts/git-commit.sh
-	git push
-
 docker-build:
 	docker build -t siakhooi/kafka-republisher:latest -f docker/Dockerfile .
 
