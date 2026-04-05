@@ -23,7 +23,7 @@ class TestProcessMessage:
         assert result is False
         mock_producer.produce.assert_not_called()
 
-    def test_process_message_with_error_returns_false(self, capsys):
+    def test_process_message_with_error_returns_false(self, caplog):
         """Test that process_message returns False for error message"""
         mock_msg = Mock()
         mock_msg.error.return_value = "Kafka error occurred"
@@ -36,11 +36,11 @@ class TestProcessMessage:
             group_id="test-group",
         )
 
-        result = process_message(mock_msg, mock_producer, config)
+        with caplog.at_level("ERROR"):
+            result = process_message(mock_msg, mock_producer, config)
 
         assert result is False
-        captured = capsys.readouterr()
-        assert "Consumer error: Kafka error occurred" in captured.out
+        assert "Consumer error: Kafka error occurred" in caplog.text
         mock_producer.produce.assert_not_called()
 
     @patch("kafka_republisher.processor.threading.Thread")
@@ -128,7 +128,7 @@ class TestProcessMessage:
 
     @patch("kafka_republisher.processor.threading.Thread")
     def test_process_message_prints_received_message(
-        self, mock_thread, capsys
+        self, mock_thread, caplog
     ):
         """Test that process_message prints received message info"""
         mock_msg = Mock()
@@ -145,11 +145,11 @@ class TestProcessMessage:
             group_id="test-group",
         )
 
-        process_message(mock_msg, mock_producer, config)
+        with caplog.at_level("INFO"):
+            process_message(mock_msg, mock_producer, config)
 
-        captured = capsys.readouterr()
-        assert "Received: my-message" in captured.out
-        assert "scheduling publish in 60s" in captured.out
+        assert "Received: my-message" in caplog.text
+        assert "scheduling publish in 60s" in caplog.text
 
     @patch("kafka_republisher.processor.threading.Thread")
     def test_process_message_creates_daemon_thread(self, mock_thread):
@@ -179,8 +179,8 @@ class TestProcessMessage:
         """Test process_message handles UTF-8 characters correctly"""
         mock_msg = Mock()
         mock_msg.error.return_value = None
-        mock_msg.value.return_value = "Hello 世界".encode('utf-8')
-        mock_msg.key.return_value = "键".encode('utf-8')
+        mock_msg.value.return_value = "Hello 世界".encode("utf-8")
+        mock_msg.key.return_value = "键".encode("utf-8")
 
         mock_producer = Mock()
         config = RepublisherConfig(

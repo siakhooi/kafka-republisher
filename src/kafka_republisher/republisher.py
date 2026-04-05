@@ -1,8 +1,11 @@
 import signal
 import threading
+import logging
 from kafka_republisher.config import get_config_from_env, RepublisherConfig
 from kafka_republisher.kafka_client import get_consumer, get_producer
 from kafka_republisher.processor import process_message
+
+logger = logging.getLogger(__name__)
 
 
 def consume_and_process_loop(
@@ -23,17 +26,17 @@ def consume_and_process_loop(
             msg = consumer.poll(1.0)
             process_message(msg, producer, config)
     except KeyboardInterrupt:
-        print("Stopping...")
+        logger.info("Stopping... (KeyboardInterrupt)")
 
 
 def run():
     config = get_config_from_env()
 
-    print("Starting Kafka Delayer (parallel mode)")
-    print(f"  Bootstrap: {config.bootstrap_servers}")
-    print(f"  From: {config.from_topic}")
-    print(f"  To: {config.to_topic}")
-    print(f"  Delay: {config.sleep_time}s")
+    logger.info("Starting Kafka Delayer (parallel mode)")
+    logger.info(f"  Bootstrap: {config.bootstrap_servers}")
+    logger.info(f"  From: {config.from_topic}")
+    logger.info(f"  To: {config.to_topic}")
+    logger.info(f"  Delay: {config.sleep_time}s")
 
     consumer = get_consumer(config.bootstrap_servers, config.group_id)
     producer = get_producer(config.bootstrap_servers)
@@ -43,7 +46,9 @@ def run():
     shutdown_event = threading.Event()
 
     def handle_signal(signum, frame):
-        print(f"Received signal {signum}, shutting down gracefully...")
+        logger.warning(
+            f"Received signal {signum}, shutting down gracefully..."
+        )
         shutdown_event.set()
 
     signal.signal(signal.SIGINT, handle_signal)

@@ -56,7 +56,7 @@ class TestDelayedPublish:
 
             mock_producer.flush.assert_called_once()
 
-    def test_delayed_publish_prints_correct_message(self, capsys):
+    def test_delayed_publish_prints_correct_message(self, caplog):
         """Test that delayed_publish prints the republished message"""
         mock_producer = Mock()
         config = RepublisherConfig(
@@ -68,10 +68,10 @@ class TestDelayedPublish:
         )
 
         with patch("kafka_republisher.publisher.time.sleep"):
-            delayed_publish(mock_producer, config, "key1", "value1")
+            with caplog.at_level("INFO"):
+                delayed_publish(mock_producer, config, "key1", "value1")
 
-            captured = capsys.readouterr()
-            assert captured.out == "Republished to destination: value1\n"
+            assert "Republished to destination: value1" in caplog.text
 
     def test_delayed_publish_with_none_key(self):
         """Test delayed_publish works with None key"""
@@ -131,7 +131,7 @@ class TestDelayedPublish:
             # Sleep should be called before any producer methods
             mock_sleep.assert_called_once_with(30)
 
-    def test_delayed_publish_with_different_topics(self, capsys):
+    def test_delayed_publish_with_different_topics(self, caplog):
         """Test delayed_publish with various topic names"""
         mock_producer = Mock()
         config = RepublisherConfig(
@@ -143,13 +143,13 @@ class TestDelayedPublish:
         )
 
         with patch("kafka_republisher.publisher.time.sleep"):
-            delayed_publish(mock_producer, config, "key1", "test-value")
+            with caplog.at_level("INFO"):
+                delayed_publish(mock_producer, config, "key1", "test-value")
 
             mock_producer.produce.assert_called_once_with(
                 "events-delayed", key="key1", value="test-value"
             )
-            captured = capsys.readouterr()
-            assert "Republished to events-delayed: test-value" in captured.out
+            assert "Republished to events-delayed: test-value" in caplog.text
 
     def test_delayed_publish_with_empty_value(self):
         """Test delayed_publish with empty string value"""
@@ -186,3 +186,41 @@ class TestDelayedPublish:
             mock_sleep.assert_called_once_with(3600)
             mock_producer.produce.assert_called_once()
             mock_producer.flush.assert_called_once()
+
+    def test_delayed_publish_logs_error_on_produce_failure(self, caplog):
+        """Test that produce exception is caught and logged"""
+        mock_producer = Mock()
+        mock_producer.produce.side_effect = Exception("Broker unavailable")
+        config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+
+        with patch("kafka_republisher.publisher.time.sleep"):
+            with caplog.at_level("ERROR"):
+                delayed_publish(mock_producer, config, "key1", "value1")
+
+        assert "Failed to republish to destination" in caplog.text
+        assert "Broker unavailable" in caplog.text
+
+    def test_delayed_publish_logs_error_on_flush_failure(self, caplog):
+        """Test that flush exception is caught and logged"""
+        mock_producer = Mock()
+        mock_producer.flush.side_effect = Exception("Flush timeout")
+        config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+
+        with patch("kafka_republisher.publisher.time.sleep"):
+            with caplog.at_level("ERROR"):
+                delayed_publish(mock_producer, config, "key1", "value1")
+
+        assert "Failed to republish to destination" in caplog.text
+        assert "Flush timeout" in caplog.text

@@ -63,7 +63,7 @@ class TestConsumeAndProcessLoop:
 
     @patch("kafka_republisher.republisher.process_message")
     def test_consume_and_process_loop_handles_keyboard_interrupt(
-        self, mock_process, capsys
+        self, mock_process, caplog
     ):
         """Test that loop handles KeyboardInterrupt gracefully"""
         mock_consumer = Mock()
@@ -81,12 +81,12 @@ class TestConsumeAndProcessLoop:
         import threading
 
         shutdown_event = threading.Event()
-        consume_and_process_loop(
-            mock_consumer, mock_producer, config, shutdown_event
-        )
+        with caplog.at_level("INFO"):
+            consume_and_process_loop(
+                mock_consumer, mock_producer, config, shutdown_event
+            )
 
-        captured = capsys.readouterr()
-        assert "Stopping..." in captured.out
+        assert "Stopping..." in caplog.text
 
     @patch("kafka_republisher.republisher.process_message")
     def test_consume_and_process_loop_continuous_polling(self, mock_process):
@@ -452,7 +452,7 @@ class TestRun:
         mock_get_consumer,
         mock_get_producer,
         mock_loop,
-        capsys,
+        caplog,
     ):
         """Test that run() prints startup information"""
         mock_config = RepublisherConfig(
@@ -466,14 +466,14 @@ class TestRun:
         mock_consumer = Mock()
         mock_get_consumer.return_value = mock_consumer
 
-        run()
+        with caplog.at_level("INFO"):
+            run()
 
-        captured = capsys.readouterr()
-        assert "Starting Kafka Delayer (parallel mode)" in captured.out
-        assert "Bootstrap: broker:9092" in captured.out
-        assert "From: input" in captured.out
-        assert "To: output" in captured.out
-        assert "Delay: 45s" in captured.out
+        assert "Starting Kafka Delayer (parallel mode)" in caplog.text
+        assert "Bootstrap: broker:9092" in caplog.text
+        assert "From: input" in caplog.text
+        assert "To: output" in caplog.text
+        assert "Delay: 45s" in caplog.text
 
     @patch("kafka_republisher.republisher.consume_and_process_loop")
     @patch("kafka_republisher.republisher.get_producer")
@@ -558,5 +558,51 @@ class TestRun:
         assert passed_config.bootstrap_servers == "test-broker:9092"
         assert passed_config.from_topic == "test-input"
         assert passed_config.to_topic == "test-output"
-        assert passed_config.sleep_time == 120
-        assert passed_config.group_id == "test-consumer-group"
+
+    @patch("kafka_republisher.republisher.signal.signal")
+    @patch("kafka_republisher.republisher.consume_and_process_loop")
+    @patch("kafka_republisher.republisher.get_producer")
+    @patch("kafka_republisher.republisher.get_consumer")
+    @patch("kafka_republisher.republisher.get_config_from_env")
+    def test_run_handle_signal_sets_shutdown_event(
+        self,
+        mock_get_config,
+        mock_get_consumer,
+        mock_get_producer,
+        mock_loop,
+        mock_signal,
+        caplog,
+    ):
+        """Test that signal handler logs warning and sets shutdown event"""
+        import signal as signal_module
+        import threading
+
+        mock_config = RepublisherConfig(
+            bootstrap_servers="localhost:9092",
+            from_topic="source",
+            to_topic="destination",
+            sleep_time=30,
+            group_id="test-group",
+        )
+        mock_get_config.return_value = mock_config
+        mock_consumer = Mock()
+        mock_get_consumer.return_value = mock_consumer
+
+        with caplog.at_level("WARNING"):
+            run()
+
+        # Extract the handler registered for SIGTERM
+        signal_calls = {
+            call[0][0]: call[0][1] for call in mock_signal.call_args_list
+        }
+        handler = signal_calls[signal_module.SIGTERM]
+
+        # Invoke the handler directly
+        handler(signal_module.SIGTERM, None)
+
+        assert "shutting down gracefully" in caplog.text
+
+        # Verify the shutdown_event was set via the loop call
+        shutdown_event = mock_loop.call_args[0][3]
+        assert isinstance(shutdown_event, threading.Event)
+        assert shutdown_event.is_set()

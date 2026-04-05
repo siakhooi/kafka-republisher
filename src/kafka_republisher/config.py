@@ -1,10 +1,17 @@
 import os
+import logging
 from dataclasses import dataclass
+
+
+def get_log_level_from_env():
+    level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+    return getattr(logging, level_str, logging.INFO)
 
 
 @dataclass
 class RepublisherConfig:
     """Configuration for Kafka Republisher"""
+
     bootstrap_servers: str
     from_topic: str
     to_topic: str

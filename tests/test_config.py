@@ -1,6 +1,8 @@
+import logging
 from kafka_republisher.config import (
     RepublisherConfig,
     get_config_from_env,
+    get_log_level_from_env,
 )
 
 import pytest
@@ -192,3 +194,42 @@ class TestGetConfigFromEnv:
         # Empty strings should be returned as-is, not use defaults
         assert config.from_topic == ""
         assert config.to_topic == ""
+
+
+class TestGetLogLevelFromEnv:
+    """Tests for get_log_level_from_env function"""
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_default_log_level_is_info(self):
+        """Test that default log level is INFO when LOG_LEVEL is not set"""
+        assert get_log_level_from_env() == logging.INFO
+
+    @patch.dict("os.environ", {"LOG_LEVEL": "DEBUG"}, clear=True)
+    def test_log_level_debug(self):
+        """Test that LOG_LEVEL=DEBUG returns logging.DEBUG"""
+        assert get_log_level_from_env() == logging.DEBUG
+
+    @patch.dict("os.environ", {"LOG_LEVEL": "WARNING"}, clear=True)
+    def test_log_level_warning(self):
+        """Test that LOG_LEVEL=WARNING returns logging.WARNING"""
+        assert get_log_level_from_env() == logging.WARNING
+
+    @patch.dict("os.environ", {"LOG_LEVEL": "ERROR"}, clear=True)
+    def test_log_level_error(self):
+        """Test that LOG_LEVEL=ERROR returns logging.ERROR"""
+        assert get_log_level_from_env() == logging.ERROR
+
+    @patch.dict("os.environ", {"LOG_LEVEL": "CRITICAL"}, clear=True)
+    def test_log_level_critical(self):
+        """Test that LOG_LEVEL=CRITICAL returns logging.CRITICAL"""
+        assert get_log_level_from_env() == logging.CRITICAL
+
+    @patch.dict("os.environ", {"LOG_LEVEL": "debug"}, clear=True)
+    def test_log_level_case_insensitive(self):
+        """Test that LOG_LEVEL is case-insensitive"""
+        assert get_log_level_from_env() == logging.DEBUG
+
+    @patch.dict("os.environ", {"LOG_LEVEL": "invalid"}, clear=True)
+    def test_invalid_log_level_defaults_to_info(self):
+        """Test that an invalid LOG_LEVEL falls back to INFO"""
+        assert get_log_level_from_env() == logging.INFO
