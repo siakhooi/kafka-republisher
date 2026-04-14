@@ -49,6 +49,7 @@ options:
 ## Links
 
 - https://pypi.org/project/kafka_republisher/
+- https://hub.docker.com/r/siakhooi/kafka-republisher
 - https://github.com/siakhooi/kafka-republisher
 - https://sonarcloud.io/project/overview?id=siakhooi_kafka-republisher
 - https://qlty.sh/gh/siakhooi/projects/kafka-republisher
