@@ -1,31 +1,31 @@
 {
-	"name": "Python 3.14 Development Dev Container",
-	"image": "siakhooi/devcontainer:python314",
-	"remoteUser": "maui",
-	"containerUser": "maui",
-	"updateRemoteUserUID": true,
-	"features": {},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"lfm.vscode-makefile-term",
-				"ms-python.python",
-				"ms-python.debugpy",
-				"ms-python.black-formatter",
-				"ms-python.vscode-pylance",
-				"ms-python.vscode-python-envs",
-				"humao.rest-client",
-				"ms-vscode.live-server",
-				"redhat.vscode-yaml",
-				"tim-koehler.helm-intellisense"
-			]
-		}
-	},
-	"mounts": [
-		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-	],
-	"remoteEnv": {
-		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
-	},
-	"postStartCommand": "sudo chmod 666 /var/run/docker.sock || true",
+    "name": "Python 3.14 Development Dev Container",
+    "image": "siakhooi/devcontainer:python314",
+    "remoteUser": "maui",
+    "containerUser": "maui",
+    "updateRemoteUserUID": true,
+    "features": {},
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "lfm.vscode-makefile-term",
+                "ms-python.python",
+                "ms-python.debugpy",
+                "ms-python.black-formatter",
+                "ms-python.vscode-pylance",
+                "ms-python.vscode-python-envs",
+                "humao.rest-client",
+                "ms-vscode.live-server",
+                "redhat.vscode-yaml",
+                "tim-koehler.helm-intellisense"
+            ]
+        }
+    },
+    "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+    "remoteEnv": {
+        "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+    },
+    "postStartCommand": "sudo chmod 666 /var/run/docker.sock || true"
 }
